@@ -17,13 +17,12 @@ import environ
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 env = environ.Env()
-env_file = os.path.join(BASE_DIR, ".env")
+env_file = os.path.join(BASE_DIR, '../.env')
+
 if os.path.exists(env_file):
     env.read_env(env_file)
 
-SECRET_KEY = env("DJANGO_SECRET_KEY")
-
-#SECRET_KEY = os.environ['SECRET_KEY']
+SECRET_KEY = env('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -86,14 +85,20 @@ WSGI_APPLICATION = 'app.wsgi.application'
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'Dev_grc_anchor',
-        'USER': 'Dev_grc_anchor',
-        'PASSWORD': 'Dev_Db_Password',
-        'HOST': 'localhost'
-    }
+    'default': env.db(
+        "DATABASE_URL", default="sqlite:////" + os.path.join(os.path.dirname(BASE_DIR), "data/db.sqlite3")
+    )
 }
+# postgres
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'Dev_grc_anchor',
+#         'USER': 'Dev_grc_anchor',
+#         'PASSWORD': 'Dev_Db_Password',
+#         'HOST': 'db'
+#     }
+# }
 
 
 # Password validation
@@ -137,3 +142,24 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'collectstatic')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 FORM_RENDERER = 'django.forms.renderers.TemplatesSetting'
+
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": True,
+    "formatters": {
+        "verbose": {"format": "{asctime} - {levelname}: {message}", "style": "{",},
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "level": "DEBUG",
+            "formatter": "verbose",
+        },
+    },
+    "loggers": {
+        "server": {"handlers": ["console"], "propogate": False, "level": "INFO"},
+        "polaris": {"handlers": ["console"], "propogate": False, "level": "DEBUG"},
+        "django": {"handlers": ["console"], "propogate": False, "level": "INFO"},
+    },
+}
