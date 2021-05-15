@@ -5,8 +5,9 @@ class MyAppConfig(AppConfig):
 
     def ready(self):
         from polaris.integrations import register_integrations
-        from .integrations import GrcRailsIntegration
+        from .integrations import GrcRailsIntegration, GrcDepositIntegration
 
         register_integrations(
+            deposit=GrcDepositIntegration(),
             rails=GrcRailsIntegration()
         )

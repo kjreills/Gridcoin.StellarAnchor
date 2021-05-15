@@ -1,6 +1,7 @@
 import gzip
 import json
 from pathlib import Path
+from typing import Dict, List
 import requests
 import sys
 import time
@@ -11,7 +12,7 @@ import time
 rpcuser="rpcuser"
 rpcpassword="@sdsdfj9252kdsk"
 rpcip="192.168.1.100"
-rpcport="9332"
+rpcport="9000"
 
 # Variables for use in all HUG functions:
 rpc_url="http://"+rpcuser+":"+rpcpassword+"@"+rpcip+":"+rpcport
@@ -43,9 +44,9 @@ def request_json(input_method, input_parameters):
     try:
         # Attempt to contact GRC node via JSON RPC
         requested_data = requests.get(rpc_url, data=json.dumps(dict(payload)), headers=headers)
-        print(" - - - ")
-        print(requested_data.content)
-        print("---")
+        # print("---")
+        # print(requested_data.content)
+        # print("---")
         if requested_data.status_code != 200:
             print("oops, something went wrong", requested_data.status_code)
             # 200 means success, if we get anything else we will return a controlled failure
@@ -60,6 +61,8 @@ def request_json(input_method, input_parameters):
         print("an exception occurred")
 
         return {'success': False, 'hug_error_message': 'GRC client connection error.'}
+
+#request_json("getinfo", None)
 
 # def return_json_file_contents(filename):
 #     """
@@ -145,9 +148,14 @@ def request_json(input_method, input_parameters):
 #     """getreceivedbyaddress <Gridcoinaddress> [minconf=1]"""
 #     return request_json("getreceivedbyaddress", [address, minconf], hug_timer, api_key)
 
-# def gettransaction(api_key: hug.types.text, txid: hug.types.text, hug_timer=3):
-#     """gettransaction "txid" """
-#     return request_json("gettransaction", [txid], hug_timer, api_key)
+def getTransaction(txid):
+    return request_json("gettransaction", [txid])
+
+def listTransactions(account="", count=10):
+    return request_json("listtransactions", [account, count])
+
+def getAddress(account: str):
+    return request_json("getaccountaddress", [account])
 
 # def listsinceblock(api_key: hug.types.text, blockhash: hug.types.text, target_confirmations: hug.types.number=1, includeWatchonly: hug.types.smart_boolean=True, hug_timer=3):
 #     """listsinceblock ( "blockhash" target-confirmations includeWatchonly)"""
