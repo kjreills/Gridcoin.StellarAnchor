@@ -4,12 +4,24 @@ from typing_extensions import get_type_hints
 from polaris.integrations import RailsIntegration, DepositIntegration
 from polaris.models import Transaction
 from polaris.templates import Template
+from polaris import settings
 from django.db.models import QuerySet
 from django import forms
 from .grcapi import listTransactions, getTransaction, getAddress
 from logging import getLogger
 
 logger = getLogger("server")
+
+class Utility:
+    def calculate_fee(fee_params: Dict):
+        DEPOSIT_FEE = 0
+        WITHDRAWAL_FEE = 0.01
+
+        if fee_params["operation"] == settings.OPERATION_WITHDRAWAL:
+            return WITHDRAWAL_FEE
+        else:
+            return DEPOSIT_FEE
+
 
 class GrcDepositIntegration(DepositIntegration):
     # def process_sep6_request(self, params, transaction: Transaction):
@@ -42,6 +54,7 @@ class GrcDepositIntegration(DepositIntegration):
                 "title": "Polaris Transaction Information",
                 "guidance": "Please enter the amount you would like to transfer.",
                 "icon_label": "Gridcoin Anchor",
+
             }
         elif template == Template.MORE_INFO:
             content = {
@@ -62,7 +75,6 @@ class GrcDepositIntegration(DepositIntegration):
 
 
 class GrcRailsIntegration(RailsIntegration):
-    CONSTANT_FEE_GRC = 0.1
 
     def __received(self, grc_transaction: Dict):
         return grc_transaction.get("category") == "receive"
@@ -85,7 +97,11 @@ class GrcRailsIntegration(RailsIntegration):
             total_deposited = sum(map(self.__amount, grc_deposits))
 
             deposit.amount_in = total_deposited
-            deposit.amount_fee = self.CONSTANT_FEE_GRC
+            deposit.amount_fee = Utility.calculate_fee({
+                        "amount": deposit.amount_in,
+                        "operation": settings.OPERATION_DEPOSIT,
+                        "asset_code": deposit.asset.code,
+                    })
             deposit.save()
             ready_deposits.append(deposit)
 
@@ -100,6 +116,10 @@ class GrcRailsIntegration(RailsIntegration):
         # return list()
 
     def execute_outgoing_transaction(self, transaction: Transaction):
-        transaction.amount_fee = 0
+        transaction.amount_fee = Utility.calculate_fee({
+                        "amount": transaction.amount_in,
+                        "operation": settings.OPERATION_WITHDRAWAL,
+                        "asset_code": transaction.asset.code,
+                    })
         transaction.status = Transaction.STATUS.completed
         transaction.save()
