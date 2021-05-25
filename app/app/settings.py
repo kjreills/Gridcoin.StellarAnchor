@@ -24,8 +24,13 @@ if os.path.exists(env_file):
 
 SECRET_KEY = env('SECRET_KEY')
 
+GRIDCOIN_USER = env('GRIDCOIN_USER')
+GRIDCOIN_PASSWORD = env('GRIDCOIN_PASSWORD')
+GRIDCOIN_DOMAIN = env('GRIDCOIN_DOMAIN')
+GRIDCOIN_PORT = env('GRIDCOIN_PORT')
+
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env('DJANGO_DEBUG')
 
 ALLOWED_HOSTS = []
 

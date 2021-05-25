@@ -1,4 +1,5 @@
 from typing import List, Optional, Dict
+from decimal import *
 from base64 import b64encode
 from typing_extensions import get_type_hints
 from polaris.integrations import RailsIntegration, DepositIntegration
@@ -7,15 +8,15 @@ from polaris.templates import Template
 from polaris import settings
 from django.db.models import QuerySet
 from django import forms
-from .grcapi import listTransactions, getTransaction, getAddress
+from .wallet import GridcoinWallet
 from logging import getLogger
 
 logger = getLogger("server")
 
 class Utility:
-    def calculate_fee(fee_params: Dict):
-        DEPOSIT_FEE = 0
-        WITHDRAWAL_FEE = 0.01
+    def calculate_fee(fee_params: Dict) -> Decimal:
+        DEPOSIT_FEE = Decimal('0')
+        WITHDRAWAL_FEE = Decimal('0.001') * fee_params["amount"] # 0.1% withdrawal fee
 
         if fee_params["operation"] == settings.OPERATION_WITHDRAWAL:
             return WITHDRAWAL_FEE
@@ -24,6 +25,8 @@ class Utility:
 
 
 class GrcDepositIntegration(DepositIntegration):
+    __wallet = GridcoinWallet()
+
     # def process_sep6_request(self, params, transaction: Transaction):
     #     if transaction.asset.code is not "GRC":
     #         return {
@@ -63,7 +66,7 @@ class GrcDepositIntegration(DepositIntegration):
             }
             if transaction.status == Transaction.STATUS.pending_user_transfer_start:
                 # We're waiting on the user to send an off-chain payment
-                offChainAddress = getAddress(str(transaction.id))
+                offChainAddress = self.__wallet.get_address(str(transaction.id))
                 content.update(
                     memo=b64encode(str(hash(transaction)).encode())
                     .decode()[:10]
@@ -75,6 +78,7 @@ class GrcDepositIntegration(DepositIntegration):
 
 
 class GrcRailsIntegration(RailsIntegration):
+    __wallet = GridcoinWallet()
 
     def __received(self, grc_transaction: Dict):
         return grc_transaction.get("category") == "receive"
@@ -87,8 +91,7 @@ class GrcRailsIntegration(RailsIntegration):
         ready_deposits = []
 
         for deposit in pending_deposits:
-            print("Deposit pending: {}".format(str(deposit.id)))
-            grc_transactions = listTransactions(str(deposit.id))
+            grc_transactions = self.__wallet.list_transactions(str(deposit.id))
 
             if (grc_transactions == []):
                 continue
@@ -107,19 +110,16 @@ class GrcRailsIntegration(RailsIntegration):
 
         return ready_deposits
 
-        # logger.info("**********************************")
-        # logger.info("getinfo from gridcoin test wallet")
-        # logger.info(transactions)
-        # logger.info("**********************************")
-
-        # #return list(pending_deposits)
-        # return list()
-
     def execute_outgoing_transaction(self, transaction: Transaction):
         transaction.amount_fee = Utility.calculate_fee({
                         "amount": transaction.amount_in,
                         "operation": settings.OPERATION_WITHDRAWAL,
                         "asset_code": transaction.asset.code,
                     })
-        transaction.status = Transaction.STATUS.completed
-        transaction.save()
+
+        try:
+            self.__wallet.send_payment(transaction.to_address, transaction.amount_in - transaction.amount_fee, str(transaction.id))
+            transaction.status = Transaction.STATUS.completed
+            transaction.save()
+        except:
+            logger.error("An unexpected exception occurred while executing an outgoing transaction")
