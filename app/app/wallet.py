@@ -5,6 +5,7 @@ import requests
 
 class GridcoinWallet():
 
+    @staticmethod
     def __request_json(input_method: str, input_parameters: List):
         """
         Request JSON data from the GRC full node, given the target command & relevant input parameters.
@@ -23,7 +24,7 @@ class GridcoinWallet():
             }
 
         if (input_parameters != None):
-            payload.update("params", input_parameters)
+            payload.update({ "params": input_parameters })
 
         try:
             requested_data = requests.get(rpc_url, data=json.dumps(dict(payload)), headers=headers)

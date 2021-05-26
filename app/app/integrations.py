@@ -3,6 +3,7 @@ from decimal import *
 from base64 import b64encode
 from typing_extensions import get_type_hints
 from polaris.integrations import RailsIntegration, DepositIntegration
+from polaris.integrations.transactions import WithdrawalIntegration, TransactionForm
 from polaris.models import Transaction
 from polaris.templates import Template
 from polaris import settings
@@ -15,14 +16,13 @@ logger = getLogger("server")
 
 class Utility:
     def calculate_fee(fee_params: Dict) -> Decimal:
-        DEPOSIT_FEE = Decimal('0')
-        WITHDRAWAL_FEE = Decimal('0.001') * fee_params["amount"] # 0.1% withdrawal fee
+        DEPOSIT_FEE = Decimal(0)
+        WITHDRAWAL_FEE = Decimal(0.001) * Decimal(fee_params["amount"]) # 0.1% withdrawal fee
 
         if fee_params["operation"] == settings.OPERATION_WITHDRAWAL:
             return WITHDRAWAL_FEE
         else:
             return DEPOSIT_FEE
-
 
 class GrcDepositIntegration(DepositIntegration):
     __wallet = GridcoinWallet()
@@ -57,12 +57,13 @@ class GrcDepositIntegration(DepositIntegration):
                 "title": "Polaris Transaction Information",
                 "guidance": "Please enter the amount you would like to transfer.",
                 "icon_label": "Gridcoin Anchor",
-
+                "icon_path": "gridcoin-logo.svg",
             }
         elif template == Template.MORE_INFO:
             content = {
                 "title": "Polaris Transaction Information",
                 "icon_label": "Gridcoin Anchor",
+                "icon_path": "gridcoin-logo.svg",
             }
             if transaction.status == Transaction.STATUS.pending_user_transfer_start:
                 # We're waiting on the user to send an off-chain payment
@@ -76,6 +77,66 @@ class GrcDepositIntegration(DepositIntegration):
             return content
 
 
+class WithdrawForm(TransactionForm):
+    """This form accepts the amount to withdraw from the user."""
+
+    gridcoin_address = forms.CharField(
+        min_length=0,
+        help_text="Enter the Gridcoin address for withdrawal.",
+        widget=forms.widgets.TextInput(
+            attrs={"class": "input", "test-value": "FakeAccount"}
+        ),
+        label="Gridcoin Address",
+    )
+
+class GrcWithdrawalIntegration(WithdrawalIntegration):
+    def form_for_transaction(
+        self, transaction: Transaction, post_data=None, amount=None, gridcoin_address=None
+    ) -> Optional[forms.Form]:
+        # kyc_form, content = SEP24KYC.check_kyc(transaction, post_data)
+        # if kyc_form:
+        #     return kyc_form
+        if transaction.amount_in:
+            return None
+        if post_data:
+            return WithdrawForm(transaction, post_data)
+        else:
+            return WithdrawForm(transaction, initial={"amount": amount})
+
+    def after_form_validation(self, form: forms.Form, transaction: Transaction):
+        gridcoin_address = form.fields["gridcoin_address"]
+        logger.info("gridcoin_address: %s; amount: %s", gridcoin_address, form.fields["amount"])
+        transaction.to_address = gridcoin_address
+        transaction.save()
+
+    def content_for_template(
+        self,
+        template: Template,
+        form: Optional[forms.Form] = None,
+        transaction: Optional[Transaction] = None,
+    ) -> Optional[Dict]:
+        # na, content = SEP24KYC.check_kyc(transaction)
+        # if content:
+        #     return content
+        if template == Template.WITHDRAW:
+            if not form:
+                return None
+            return {
+                "title": "Polaris Transaction Information",
+                "icon_label": "Gridcoin Anchor",
+                "icon_path": "gridcoin-logo.svg",
+                "guidance": (
+                        "Please enter the banking details for the account "
+                        "you would like to receive your funds."
+                ),
+            }
+        else:  # template == Template.MORE_INFO
+            return {
+                "title": "Polaris Transaction Information",
+                "icon_label": "Gridcoin Anchor",
+                "icon_path": "gridcoin-logo.svg",
+            }
+
 
 class GrcRailsIntegration(RailsIntegration):
     __wallet = GridcoinWallet()
@@ -84,7 +145,7 @@ class GrcRailsIntegration(RailsIntegration):
         return grc_transaction.get("category") == "receive"
 
     def __amount(self, grc_transaction: Dict):
-        return grc_transaction.get("amount")
+        return Decimal(grc_transaction.get("amount"))
 
     def poll_pending_deposits(self, pending_deposits: QuerySet) -> List[Transaction]:
 
@@ -110,6 +171,9 @@ class GrcRailsIntegration(RailsIntegration):
 
         return ready_deposits
 
+    def poll_outgoing_transactions(self, transactions: QuerySet) -> List[Transaction]:
+        return list(transactions)
+
     def execute_outgoing_transaction(self, transaction: Transaction):
         transaction.amount_fee = Utility.calculate_fee({
                         "amount": transaction.amount_in,
@@ -118,8 +182,18 @@ class GrcRailsIntegration(RailsIntegration):
                     })
 
         try:
-            self.__wallet.send_payment(transaction.to_address, transaction.amount_in - transaction.amount_fee, str(transaction.id))
+            send_amount = Decimal(transaction.amount_in) - transaction.amount_fee
+            logger.info("Transaction to_address: %s", str(transaction.to_address))
+            self.__wallet.send_payment(transaction.to_address, send_amount, str(transaction.id))
             transaction.status = Transaction.STATUS.completed
             transaction.save()
-        except:
-            logger.error("An unexpected exception occurred while executing an outgoing transaction")
+        except Exception as exn:
+            logger.error("An unexpected exception occurred while executing an outgoing transaction", exn)
+            transaction.status = Transaction.STATUS.error
+            transaction.status_message = (
+                f"Unable to find user info for transaction {transaction.id}"
+            )
+            transaction.save()
+            return
+
+
