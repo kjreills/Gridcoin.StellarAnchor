@@ -80,11 +80,11 @@ class GrcDepositIntegration(DepositIntegration):
 class WithdrawForm(TransactionForm):
     """This form accepts the amount to withdraw from the user."""
 
-    gridcoin_address = forms.CharField(
+    to_address = forms.CharField(
         min_length=0,
         help_text="Enter the Gridcoin address for withdrawal.",
         widget=forms.widgets.TextInput(
-            attrs={"class": "input", "test-value": "FakeAccount"}
+            attrs={"class": "input"}
         ),
         label="Gridcoin Address",
     )
@@ -104,9 +104,7 @@ class GrcWithdrawalIntegration(WithdrawalIntegration):
             return WithdrawForm(transaction, initial={"amount": amount})
 
     def after_form_validation(self, form: forms.Form, transaction: Transaction):
-        gridcoin_address = form.fields["gridcoin_address"]
-        logger.info("gridcoin_address: %s; amount: %s", gridcoin_address, form.fields["amount"])
-        transaction.to_address = gridcoin_address
+        transaction.to_address = form.cleaned_data["to_address"]
         transaction.save()
 
     def content_for_template(
@@ -172,28 +170,50 @@ class GrcRailsIntegration(RailsIntegration):
         return ready_deposits
 
     def poll_outgoing_transactions(self, transactions: QuerySet) -> List[Transaction]:
-        return list(transactions)
+        completed_transactions = []
+
+        for transaction in transactions:
+            if not transaction.external_transaction_id:
+                continue
+
+            gridcoin_transaction = self.__wallet.get_transaction(transaction.external_transaction_id)
+            confirmations = gridcoin_transaction["confirmations"]
+
+            if confirmations and confirmations > 10:
+                completed_transactions.append(transaction)
+
+        return completed_transactions
 
     def execute_outgoing_transaction(self, transaction: Transaction):
+        def error(message: str, exn: Exception):
+            if exn:
+                logger.error(message, exc_info=exn)
+            else:
+                logger.error(message)
+            transaction.status = Transaction.STATUS.error
+            transaction.status_message = message
+            transaction.save()
+
         transaction.amount_fee = Utility.calculate_fee({
                         "amount": transaction.amount_in,
                         "operation": settings.OPERATION_WITHDRAWAL,
                         "asset_code": transaction.asset.code,
                     })
+        send_amount = Decimal(transaction.amount_in) - transaction.amount_fee
+
+        validate_response = self.__wallet.validate_address(transaction.to_address)
+
+        if not validate_response["isvalid"]:
+            error(f"Invalid Gridcoin address: {transaction.to_address}")
+            return
 
         try:
-            send_amount = Decimal(transaction.amount_in) - transaction.amount_fee
-            logger.info("Transaction to_address: %s", str(transaction.to_address))
-            self.__wallet.send_payment(transaction.to_address, send_amount, str(transaction.id))
-            transaction.status = Transaction.STATUS.completed
-            transaction.save()
+            gridcoin_tx_id = self.__wallet.send_payment(transaction.to_address, send_amount, str(transaction.id))
         except Exception as exn:
-            logger.error("An unexpected exception occurred while executing an outgoing transaction", exn)
-            transaction.status = Transaction.STATUS.error
-            transaction.status_message = (
-                f"Unable to find user info for transaction {transaction.id}"
-            )
+            error("An unexpected exception occurred while executing an outgoing transaction", exn)
+        else:
+            transaction.external_transaction_id = gridcoin_tx_id
+            transaction.status = Transaction.STATUS.pending_external
             transaction.save()
-            return
 
 
