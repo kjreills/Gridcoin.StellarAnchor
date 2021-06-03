@@ -24,11 +24,6 @@ class GridcoinWallet():
 
         from .settings import GRIDCOIN_USER, GRIDCOIN_PASSWORD, GRIDCOIN_DOMAIN, GRIDCOIN_PORT
 
-        # GRIDCOIN_USER="rpcuser"
-        # GRIDCOIN_PASSWORD="@sdsdfj9252kdsk"
-        # GRIDCOIN_DOMAIN="192.168.1.100"
-        # GRIDCOIN_PORT="9000"
-
         rpc_url="http://"+GRIDCOIN_USER+":"+GRIDCOIN_PASSWORD+"@"+GRIDCOIN_DOMAIN+":"+GRIDCOIN_PORT
         headers = {'content-type': 'application/json'}
 

@@ -1,7 +1,6 @@
 from typing import List, Optional, Dict
 from decimal import *
 from base64 import b64encode
-from typing_extensions import get_type_hints
 from polaris.integrations import RailsIntegration, DepositIntegration
 from polaris.integrations.transactions import WithdrawalIntegration, TransactionForm
 from polaris.models import Transaction
@@ -13,6 +12,8 @@ from .wallet import GridcoinWallet
 from logging import getLogger
 
 logger = getLogger("server")
+
+TITLE = "Gridcoin Anchor"
 
 class Utility:
     def calculate_fee(fee_params: Dict) -> Decimal:
@@ -27,42 +28,26 @@ class Utility:
 class GrcDepositIntegration(DepositIntegration):
     __wallet = GridcoinWallet()
 
-    # def process_sep6_request(self, params, transaction: Transaction):
-    #     if transaction.asset.code is not "GRC":
-    #         return {
-    #             "error": "This anchor doesn't support the given currency code: ETH"
-    #         }
-
-    #     #Create GRC address with label=transaction id
-    #     #return address to send funds to
-
-    #     return {
-
-    #     }
-
     def content_for_template(
         self,
         template: Template,
         form: Optional[forms.Form] = None,
         transaction: Optional[Transaction] = None,
     ) -> Optional[Dict]:
-        #na, kyc_content = SEP24KYC.check_kyc(transaction)
-        #if kyc_content:
-        #    return kyc_content
         if template == Template.DEPOSIT:
             if not form:
                 return None
 
             return {
-                "title": "Polaris Transaction Information",
-                "guidance": "Please enter the amount you would like to transfer.",
-                "icon_label": "Gridcoin Anchor",
+                "title": TITLE,
+                "guidance": "Please enter the amount you would like to deposit.",
+                "icon_label": TITLE,
                 "icon_path": "gridcoin-logo.svg",
             }
         elif template == Template.MORE_INFO:
             content = {
-                "title": "Polaris Transaction Information",
-                "icon_label": "Gridcoin Anchor",
+                "title": TITLE,
+                "icon_label": TITLE,
                 "icon_path": "gridcoin-logo.svg",
             }
             if transaction.status == Transaction.STATUS.pending_user_transfer_start:
@@ -72,10 +57,12 @@ class GrcDepositIntegration(DepositIntegration):
                     memo=b64encode(str(hash(transaction)).encode())
                     .decode()[:10]
                     .upper(),
-                    instructions="To complete your deposit, send the correct amount of GRC from your Gridcoin wallet to address: {a}".format(a=offChainAddress)
+                    instructions=
+                        "<h5>Deposit Address:</h5>"
+                            "<p><span style=\"background-color: #ffffff;color: black;border: #919198 solid 1px;border-radius: 0.3em;padding: 0em 0.5em;\">{a}</span><button type=\"button\" onclick=\"navigator.clipboard.writeText('{a}')\" style=\"padding-top: 2px;padding-bottom: 1px;\">📋</button></p>"
+                            "<p>To complete your deposit, send {amt} GRC to the address above</p>".format(a=offChainAddress, amt=transaction.amount_in)
                 )
             return content
-
 
 class WithdrawForm(TransactionForm):
     """This form accepts the amount to withdraw from the user."""
@@ -93,9 +80,6 @@ class GrcWithdrawalIntegration(WithdrawalIntegration):
     def form_for_transaction(
         self, transaction: Transaction, post_data=None, amount=None, gridcoin_address=None
     ) -> Optional[forms.Form]:
-        # kyc_form, content = SEP24KYC.check_kyc(transaction, post_data)
-        # if kyc_form:
-        #     return kyc_form
         if transaction.amount_in:
             return None
         if post_data:
@@ -113,28 +97,23 @@ class GrcWithdrawalIntegration(WithdrawalIntegration):
         form: Optional[forms.Form] = None,
         transaction: Optional[Transaction] = None,
     ) -> Optional[Dict]:
-        # na, content = SEP24KYC.check_kyc(transaction)
-        # if content:
-        #     return content
         if template == Template.WITHDRAW:
             if not form:
                 return None
             return {
-                "title": "Polaris Transaction Information",
-                "icon_label": "Gridcoin Anchor",
+                "title": TITLE,
+                "icon_label": TITLE,
                 "icon_path": "gridcoin-logo.svg",
                 "guidance": (
-                        "Please enter the banking details for the account "
-                        "you would like to receive your funds."
+                        "Please enter the Gridcoin address and amount for withdrawal."
                 ),
             }
         else:  # template == Template.MORE_INFO
             return {
-                "title": "Polaris Transaction Information",
-                "icon_label": "Gridcoin Anchor",
+                "title": TITLE,
+                "icon_label": TITLE,
                 "icon_path": "gridcoin-logo.svg",
             }
-
 
 class GrcRailsIntegration(RailsIntegration):
     __wallet = GridcoinWallet()
@@ -179,7 +158,7 @@ class GrcRailsIntegration(RailsIntegration):
             gridcoin_transaction = self.__wallet.get_transaction(transaction.external_transaction_id)
             confirmations = gridcoin_transaction["confirmations"]
 
-            if confirmations and confirmations > 10:
+            if confirmations and confirmations >= 5:
                 completed_transactions.append(transaction)
 
         return completed_transactions
@@ -215,5 +194,3 @@ class GrcRailsIntegration(RailsIntegration):
             transaction.external_transaction_id = gridcoin_tx_id
             transaction.status = Transaction.STATUS.pending_external
             transaction.save()
-
-
