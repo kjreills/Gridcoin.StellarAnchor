@@ -22,9 +22,9 @@ class GridcoinWallet():
         More info: http://docs.python-.org/en/master/
         """
 
-        from .settings import GRIDCOIN_USER, GRIDCOIN_PASSWORD, GRIDCOIN_DOMAIN, GRIDCOIN_PORT
+        from django.conf import settings
 
-        rpc_url="http://"+GRIDCOIN_USER+":"+GRIDCOIN_PASSWORD+"@"+GRIDCOIN_DOMAIN+":"+GRIDCOIN_PORT
+        rpc_url="http://"+settings.GRIDCOIN_USER+":"+settings.GRIDCOIN_PASSWORD+"@"+settings.GRIDCOIN_DOMAIN+":"+settings.GRIDCOIN_PORT
         headers = {'content-type': 'application/json'}
 
         payload = {

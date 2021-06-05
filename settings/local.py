@@ -94,17 +94,6 @@ DATABASES = {
         "DATABASE_URL", default="sqlite:////" + os.path.join(os.path.dirname(BASE_DIR), "data/db.sqlite3")
     )
 }
-# postgres
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': 'Dev_grc_anchor',
-#         'USER': 'Dev_grc_anchor',
-#         'PASSWORD': 'Dev_Db_Password',
-#         'HOST': 'db'
-#     }
-# }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/2.2/ref/settings/#auth-password-validators
