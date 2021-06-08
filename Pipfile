@@ -1,0 +1,8 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[packages]
+django-polaris = "1.4.1"
+simplejson = "3.17.2"

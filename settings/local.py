@@ -16,6 +16,8 @@ import environ
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+print(BASE_DIR)
+
 env = environ.Env()
 env_file = os.path.join(BASE_DIR, '../.env')
 
@@ -46,7 +48,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'corsheaders',
     'rest_framework',
-    'app',
+    'server',
     'polaris',
 ]
 
@@ -65,7 +67,7 @@ MIDDLEWARE = [
 
 POLARIS_ACTIVE_SEPS = ["sep-1", "sep-10", "sep-24"]
 
-ROOT_URLCONF = 'app.urls'
+ROOT_URLCONF = 'server.urls'
 
 TEMPLATES = [
     {
@@ -83,16 +85,20 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'app.wsgi.application'
+WSGI_APPLICATION = 'server.wsgi.application'
 
 
 # Database
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
 
 DATABASES = {
-    'default': env.db(
-        "DATABASE_URL", default="sqlite:////" + os.path.join(os.path.dirname(BASE_DIR), "data/db.sqlite3")
-    )
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'postgres',
+        'HOST': 'localhost',
+        'USER': 'postgres',
+        'PASSWORD': 'dev_grc_anchor'
+    }
 }
 
 # Password validation
