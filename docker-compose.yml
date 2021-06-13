@@ -1,42 +1,19 @@
 services:
-  nginx:
-    image: nginx:1.15-alpine
-    restart: unless-stopped
-    volumes:
-      - ./data/nginx:/etc/nginx/conf.d
-      - ./data/certbot/conf:/etc/letsencrypt
-      - ./data/certbot/www:/var/www/certbot
-    ports:
-      - "80:80"
-      - "443:443"
-    command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
-    
-  certbot:
-    image: certbot/certbot
-    restart: unless-stopped
-    volumes:
-      - ./data/certbot/conf:/etc/letsencrypt
-      - ./data/certbot/www:/var/www/certbot
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
-
-  server:
-    container_name: "test-server"
-    build: .
-    volumes:
-      - ./data:/home/data
-    ports:
-      - "8000:8000"
-    command: python /home/app/manage.py migrate; python app/manage.py runserver --nostatic 0.0.0.0:8000
+  db:
+    image: postgres
+    restart: always
+    ports: 
+      - 5432:5432
+    environment:
+      POSTGRES_PASSWORD: dev_grc_anchor
 
   execute_outgoing_transactions:
-    container_name: "test-execute_outgoing_transactions"
     build: .
     volumes:
       - ./data:/home/data
     command: python app/manage.py execute_outgoing_transactions --loop
 
   poll_outgoing_transactions:
-    container_name: poll_outgoing_transactions
     build: .
     volumes:
       - ./data:/home/data
@@ -45,21 +22,18 @@ services:
     command: python app/manage.py poll_outgoing_transactions --loop
 
   check_trustlines:
-    container_name: "test-check_trustlines"
     build: .
     volumes:
       - ./data:/home/data
     command: python app/manage.py check_trustlines --loop
 
   watch_transaction:
-    container_name: "test-watch_transactions"
     build: .
     volumes:
       - ./data:/home/data
     command: python app/manage.py watch_transactions
     
   poll_pending_deposits:
-    container_name: "test-poll_pending_deposits"
     build: .
     volumes:
       - ./data:/home/data
