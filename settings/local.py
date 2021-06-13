@@ -16,13 +16,11 @@ import environ
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-print(BASE_DIR)
-
 env = environ.Env()
-env_file = os.path.join(BASE_DIR, '../.env')
+# env_file = os.path.join(BASE_DIR, '../.env')
 
-if os.path.exists(env_file):
-    env.read_env(env_file)
+# if os.path.exists(env_file):
+#     env.read_env(env_file)
 
 SECRET_KEY = env('SECRET_KEY')
 
@@ -34,7 +32,7 @@ GRIDCOIN_PORT = env('GRIDCOIN_PORT')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DJANGO_DEBUG')
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = env.list('DJANGO_ALLOWED_HOSTS')
 
 
 # Application definition
@@ -95,7 +93,7 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'postgres',
-        'HOST': 'localhost',
+        'HOST': '192.168.1.100',
         'USER': 'postgres',
         'PASSWORD': 'dev_grc_anchor'
     }

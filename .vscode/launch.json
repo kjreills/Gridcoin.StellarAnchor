@@ -8,7 +8,7 @@
             "name": "Python: poll_pending_deposits",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/app/manage.py",
+            "program": "${workspaceFolder}/manage.py",
             "console": "integratedTerminal",
             "args": ["poll_pending_deposits"]
         },
@@ -16,11 +16,17 @@
             "name": "Python: run_server",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/app/manage.py",
+            "program": "${workspaceFolder}/manage.py",
             "console": "integratedTerminal",
             "args": ["runserver", "--nostatic", "0.0.0.0:8000"]
+        },
+        {
+            "name": "Python: watch_transactions",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/manage.py",
+            "console": "integratedTerminal",
+            "args": ["watch_transactions"]
         }
-
-        //python app/manage.py runserver --nostatic 0.0.0.0:8000
     ]
 }

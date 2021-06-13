@@ -125,6 +125,7 @@ class GrcRailsIntegration(RailsIntegration):
         return Decimal(grc_transaction.get("amount"))
 
     def poll_pending_deposits(self, pending_deposits: QuerySet) -> List[Transaction]:
+        logger.info("Polling pending deposits...")
 
         ready_deposits = []
 
