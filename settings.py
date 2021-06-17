@@ -11,21 +11,24 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 """
 
 import os
+import environ
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-SECRET_KEY = os.environ['SECRET_KEY']
+env = environ.Env()
 
-GRIDCOIN_USER = os.environ['GRIDCOIN_USER']
-GRIDCOIN_PASSWORD = os.environ['GRIDCOIN_PASSWORD']
-GRIDCOIN_DOMAIN = os.environ['GRIDCOIN_DOMAIN']
-GRIDCOIN_PORT = os.environ['GRIDCOIN_PORT']
+SECRET_KEY = env('SECRET_KEY')
+
+GRIDCOIN_USER = env('GRIDCOIN_USER')
+GRIDCOIN_PASSWORD = env('GRIDCOIN_PASSWORD')
+GRIDCOIN_DOMAIN = env('GRIDCOIN_DOMAIN')
+GRIDCOIN_PORT = env('GRIDCOIN_PORT')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ['DJANGO_DEBUG']
+DEBUG = env('DJANGO_DEBUG')
 
-ALLOWED_HOSTS = [os.environ['WEBSITE_HOSTNAME']] if 'WEBSITE_HOSTNAME' in os.environ else []
+ALLOWED_HOSTS = env.list('DJANGO_ALLOWED_HOSTS')
 
 
 # Application definition
@@ -78,16 +81,19 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'server.wsgi.application'
 
+
+# Database
+# https://docs.djangoproject.com/en/2.2/ref/settings/#databases
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ['DBNAME'],
-        'HOST': os.environ['DBHOST'],
-        'USER': os.environ['DBUSER'],
-        'PASSWORD': os.environ['DBPASS']
+        'NAME': env('DBNAME'),
+        'HOST': env('DBHOST'),
+        'USER': env('DBUSER'),
+        'PASSWORD': env('DBPASS')
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/2.2/ref/settings/#auth-password-validators

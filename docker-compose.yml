@@ -1,40 +1,35 @@
 services:
-  db:
-    image: postgres
-    restart: always
-    ports: 
-      - 5432:5432
-    environment:
-      POSTGRES_PASSWORD: dev_grc_anchor
-
   execute_outgoing_transactions:
     build: .
-    volumes:
-      - ./data:/home/data
-    command: python app/manage.py execute_outgoing_transactions --loop
+    depends_on:
+      - db
+    env_file: .env
+    command: python manage.py execute_outgoing_transactions --loop
 
   poll_outgoing_transactions:
     build: .
-    volumes:
-      - ./data:/home/data
     depends_on:
-      - server
-    command: python app/manage.py poll_outgoing_transactions --loop
+      - db
+    env_file: .env
+    command: python manage.py poll_outgoing_transactions --loop
 
   check_trustlines:
     build: .
-    volumes:
-      - ./data:/home/data
-    command: python app/manage.py check_trustlines --loop
+    depends_on:
+      - db
+    env_file: .env
+    command: python manage.py check_trustlines --loop
 
   watch_transaction:
     build: .
-    volumes:
-      - ./data:/home/data
-    command: python app/manage.py watch_transactions
+    depends_on:
+      - db
+    env_file: .env
+    command: python manage.py watch_transactions
     
   poll_pending_deposits:
     build: .
-    volumes:
-      - ./data:/home/data
-    command: python app/manage.py poll_pending_deposits --loop
+    depends_on:
+      - db
+    env_file: .env
+    command: python manage.py poll_pending_deposits --loop

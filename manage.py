@@ -5,7 +5,7 @@ import sys
 
 
 def main():
-    settings_module = "settings.hosted" if 'WEBSITE_HOSTNAME' in os.environ else 'settings.local'
+    settings_module = 'settings'
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', settings_module)
 
     try:

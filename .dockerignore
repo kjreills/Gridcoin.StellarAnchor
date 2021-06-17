@@ -1,0 +1,8 @@
+.env
+.env.example
+.git/
+.vscode/
+.gitignore
+LICENSE
+README.md
+*.sh
