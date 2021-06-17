@@ -1,0 +1,31 @@
+ACCOUNTS = [ "GBS36PFA3WVJY6D6NYWJOBEOWC44Y7LPXDQXL4ONJMJXRIZLAGKTAR6X", "GC4FQI2YDCMHE7MYN6A6JLD6IOT3GM2B474TJPS7Y6ZK2ZYO77X2OXP4" ]
+VERSION = "2.4.1"
+SIGNING_KEY = "GBS36PFA3WVJY6D6NYWJOBEOWC44Y7LPXDQXL4ONJMJXRIZLAGKTAR6X"
+NETWORK_PASSPHRASE = "Test SDF Network ; September 2015"
+
+TRANSFER_SERVER_SEP0024 = "http://localhost:8000/sep24"
+WEB_AUTH_ENDPOINT = "http://localhost:8000/auth"
+
+[[CURRENCIES]]
+code = "GRC"
+name = "Gridcoin"
+issuer = "GBS36PFA3WVJY6D6NYWJOBEOWC44Y7LPXDQXL4ONJMJXRIZLAGKTAR6X"
+status = "test"
+is_asset_anchored = true
+anchor_asset_type = "crypto"
+anchor_asset = "GRC"
+desc = "A token that is anchored 1:1 by the Gridcoin cryptocurrency"
+image = "http://localhost:8000/static/favicon-128.png"
+
+[[PRINCIPALS]]
+name = "Kyle Reilly"
+keybase = "kylereilly"
+twitter = "kyle_reilly"
+github = "https://www.github.com/kjreills"
+
+[DOCUMENTATION]
+ORG_NAME = "Gridcoin Testnet Anchor"
+ORG_URL = "https://gridcoin.us"
+ORG_DESCRIPTION = "Gridcoin Testnet Anchor"
+ORG_TWITTER = "GridcoinNetwork"
+ORG_GITHUB = "gridcoin-community"

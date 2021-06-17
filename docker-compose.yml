@@ -1,0 +1,35 @@
+services:
+  execute_outgoing_transactions:
+    build: .
+    depends_on:
+      - db
+    env_file: .env
+    command: python manage.py execute_outgoing_transactions --loop
+
+  poll_outgoing_transactions:
+    build: .
+    depends_on:
+      - db
+    env_file: .env
+    command: python manage.py poll_outgoing_transactions --loop
+
+  check_trustlines:
+    build: .
+    depends_on:
+      - db
+    env_file: .env
+    command: python manage.py check_trustlines --loop
+
+  watch_transaction:
+    build: .
+    depends_on:
+      - db
+    env_file: .env
+    command: python manage.py watch_transactions
+    
+  poll_pending_deposits:
+    build: .
+    depends_on:
+      - db
+    env_file: .env
+    command: python manage.py poll_pending_deposits --loop
