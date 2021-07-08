@@ -28,7 +28,7 @@ jobs:
     #     source venv/bin/activate
 
     - name: Install dependencies
-      run: pipenv install --deploy
+      run: pip install pipenv && pipenv install --deploy
 
     # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
 
