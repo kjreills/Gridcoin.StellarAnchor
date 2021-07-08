@@ -119,6 +119,7 @@ class GrcRailsIntegration(RailsIntegration):
     __wallet = GridcoinWallet()
 
     def __received(self, grc_transaction: Dict):
+        logger.info(f"GRC Transaction: {grc_transaction}")
         return grc_transaction.get("category") == "receive"
 
     def __amount(self, grc_transaction: Dict):
