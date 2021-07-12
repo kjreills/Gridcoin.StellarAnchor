@@ -10,6 +10,7 @@ from django.db.models import QuerySet
 from django import forms
 from .wallet import GridcoinWallet
 from logging import getLogger
+from result import Err
 
 logger = getLogger("server")
 
@@ -53,6 +54,9 @@ class GrcDepositIntegration(DepositIntegration):
             if transaction.status == Transaction.STATUS.pending_user_transfer_start:
                 # We're waiting on the user to send an off-chain payment
                 offChainAddress = self.__wallet.get_address(str(transaction.id))
+                if isinstance(offChainAddress, Err):
+                    raise offChainAddress.value
+
                 content.update(
                     memo=b64encode(str(hash(transaction)).encode())
                     .decode()[:10]
@@ -60,7 +64,7 @@ class GrcDepositIntegration(DepositIntegration):
                     instructions=
                         "<h5>Deposit Address:</h5>"
                             "<p><span style=\"background-color: #ffffff;color: black;border: #919198 solid 1px;border-radius: 0.3em;padding: 0em 0.5em;\">{a}</span><button type=\"button\" onclick=\"navigator.clipboard.writeText('{a}')\" style=\"padding-top: 2px;padding-bottom: 1px;\">📋</button></p>"
-                            "<p>To complete your deposit, send {amt} GRC to the address above</p>".format(a=offChainAddress, amt=transaction.amount_in)
+                            "<p>To complete your deposit, send {amt} GRC to the address above</p>".format(a=offChainAddress.value, amt=transaction.amount_in)
                 )
             return content
 
@@ -126,17 +130,15 @@ class GrcRailsIntegration(RailsIntegration):
         return Decimal(grc_transaction.get("amount"))
 
     def poll_pending_deposits(self, pending_deposits: QuerySet) -> List[Transaction]:
-        logger.info("Polling pending deposits...")
-
         ready_deposits = []
 
         for deposit in pending_deposits:
             grc_transactions = self.__wallet.list_transactions(str(deposit.id))
 
-            if (grc_transactions == []):
+            if isinstance(grc_transactions, Err) or (grc_transactions.value == []):
                 continue
 
-            grc_deposits = filter (self.__received, grc_transactions)
+            grc_deposits = filter (self.__received, grc_transactions.value)
             total_deposited = sum(map(self.__amount, grc_deposits))
 
             deposit.amount_in = total_deposited
@@ -158,9 +160,13 @@ class GrcRailsIntegration(RailsIntegration):
                 continue
 
             gridcoin_transaction = self.__wallet.get_transaction(transaction.external_transaction_id)
-            confirmations = gridcoin_transaction["confirmations"]
 
-            if confirmations and confirmations >= 5:
+            if isinstance(gridcoin_transaction, Err):
+                logger.error("Unexpected error occurred during poll_outgoing_transactions", exc_info=gridcoin_transaction.value)
+
+            confirmations = gridcoin_transaction.value["confirmations"]
+
+            if confirmations and confirmations >= 1:
                 completed_transactions.append(transaction)
 
         return completed_transactions
@@ -184,15 +190,17 @@ class GrcRailsIntegration(RailsIntegration):
 
         validate_response = self.__wallet.validate_address(transaction.to_address)
 
-        if not validate_response["isvalid"]:
+        if isinstance(validate_response, Err):
+            error("Unexpected error occured")
+        elif not validate_response.value["isvalid"]:
             error(f"Invalid Gridcoin address: {transaction.to_address}")
             return
 
-        try:
-            gridcoin_tx_id = self.__wallet.send_payment(transaction.to_address, send_amount, str(transaction.id))
-        except Exception as exn:
-            error("An unexpected exception occurred while executing an outgoing transaction", exn)
+        gridcoin_tx_id = self.__wallet.send_payment(transaction.to_address, send_amount, str(transaction.id))
+        
+        if (isinstance(gridcoin_tx_id, Err)):
+            error("An unexpected exception occurred while executing an outgoing transaction", gridcoin_tx_id.value)        
         else:
-            transaction.external_transaction_id = gridcoin_tx_id
+            transaction.external_transaction_id = gridcoin_tx_id.value
             transaction.status = Transaction.STATUS.pending_external
             transaction.save()
