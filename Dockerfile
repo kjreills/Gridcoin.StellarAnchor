@@ -5,3 +5,5 @@ WORKDIR /home/app/
 COPY ./ /home/app/
 
 RUN pip install pipenv && pipenv install --deploy --system
+
+RUN python /home/app/manage.py collectstatic --no-input
