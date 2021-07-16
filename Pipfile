@@ -7,3 +7,4 @@ verify_ssl = true
 django-polaris = "1.4.1"
 simplejson = "3.17.2"
 result = "*"
+seqlog = "*"

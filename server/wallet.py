@@ -3,10 +3,10 @@ import simplejson as json
 from decimal import *
 from typing import Any, Dict
 import requests
-from logging import exception, getLogger
+from logging import getLogger
 from result import Ok, Err, Result
 
-logger = getLogger("server")
+logger = getLogger("wallet")
 
 class DecimalEncoder(json.JSONEncoder):
     def default(self, o):
@@ -55,9 +55,14 @@ class GridcoinWallet():
             response = requests.request(method, f"{settings.GRIDCOIN_API_URL}/Gridcoin/{url}", headers=headers, data=json.dumps(data, cls=DecimalEncoder))
 
             if response.status_code != 200:
-                logger.warn(f"Non-200 status code returned for request to {url}. Response: {response.text}. Status code: {response.status_code}")
+                logger.warn(
+                    "Non-200 status code returned for request to %s. Response: %s. Status code: %d",
+                    url,
+                    response.text,
+                    response.status_code
+                )
 
-                return Err(exception("Non-200 status code returned from the server", { response.status_code }))
+                return Err(Exception("Non-200 status code returned from the server", { "status_code": response.status_code }))
             else:
                 result = response.json()['result']
 
@@ -74,17 +79,17 @@ class GridcoinWallet():
         return self.__request("POST", url, data)
 
     def get_transaction(self, transaction_id: str):
-        logger.info(f"get_transaction: {transaction_id}")
+        logger.info("get_transaction: %s", transaction_id)
 
         return self.__get(f"getTransaction/{transaction_id}")
 
     def list_transactions(self, account="", count=10):
-        logger.info(f"list_transactions: {account}")
+        logger.info("list_transactions: %s", account)
 
         return self.__get(f"listTransactions?account={account}&count={count}")
 
     def get_address(self, account: str):
-        logger.info(f"get_address: {account}")
+        logger.info("get_address: %s", account)
 
         return self.__get(f"getAccountAddress/{account}")
 
@@ -95,11 +100,11 @@ class GridcoinWallet():
             "transactionId": transaction_id
         }
 
-        logger.info(f"send_payment: {payload}")
+        logger.info("send_payment: %s", payload)
 
         return self.__post(f"sendToAddress", payload)
 
     def validate_address(self, address: str):
-        logger.info(f"send_payment: {address}")
+        logger.info("validate_address: %s", address)
 
         return self.__get(f"validateAddress/{address}")

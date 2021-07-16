@@ -18,6 +18,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/manage.py",
             "console": "integratedTerminal",
+            "justMyCode": false,
             "args": ["runserver", "--nostatic", "0.0.0.0:8000"]
         },
         {

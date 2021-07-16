@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 
 import os
 import environ
+import logging
+import seqlog
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -26,8 +28,10 @@ GRIDCOIN_API_URL=env('GRIDCOIN_API_URL')
 GRIDCOIN_AUTH_URL=env('GRIDCOIN_AUTH_URL')
 GRIDCOIN_AUDIENCE=env('GRIDCOIN_AUDIENCE')
 
+ENVIRONMENT=env("ENVIRONMENT")
+
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env('DJANGO_DEBUG')
+# DEBUG = True
 
 ALLOWED_HOSTS = env.list('DJANGO_ALLOWED_HOSTS')
 
@@ -138,23 +142,31 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 FORM_RENDERER = 'django.forms.renderers.TemplatesSetting'
 
-
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": True,
-    "formatters": {
-        "verbose": {"format": "{asctime} - {levelname}: {message}", "style": "{",},
-    },
     "handlers": {
         "console": {
-            "class": "logging.StreamHandler",
-            "level": "DEBUG",
-            "formatter": "verbose",
+            "class": "seqlog.structured_logging.ConsoleStructuredLogHandler",
+            "level": "DEBUG"
         },
+        "seq": {
+            "class": "seqlog.structured_logging.SeqLogHandler",
+            "server_url": env("SEQ_URL"),
+            "api_key": "",
+            "level": logging.INFO,
+            "batch_size": 10,
+            "auto_flush_timeout": 10  # seconds
+        }
     },
     "loggers": {
-        "server": {"handlers": ["console"], "propogate": False, "level": "INFO"},
-        "polaris": {"handlers": ["console"], "propogate": False, "level": "DEBUG"},
-        "django": {"handlers": ["console"], "propogate": False, "level": "INFO"},
-    },
+        "integrations": {"handlers": ["console", "seq"], "propogate": False, "level": "INFO"},
+        "wallet": {"handlers": ["console", "seq"], "propogate": False, "level": "INFO"},
+        "polaris": {"handlers": ["console", "seq"], "propogate": False, "level": "DEBUG"},
+        "django": {"handlers": ["console", "seq"], "propogate": False, "level": "INFO"},
+    }
 }
+
+seqlog.set_global_log_properties(
+    Environment=ENVIRONMENT
+)

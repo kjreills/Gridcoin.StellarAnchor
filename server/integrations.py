@@ -1,3 +1,4 @@
+import logging
 from typing import List, Optional, Dict
 from decimal import *
 from base64 import b64encode
@@ -6,25 +7,16 @@ from polaris.integrations.transactions import WithdrawalIntegration, Transaction
 from polaris.models import Transaction
 from polaris.templates import Template
 from polaris import settings
+from polaris.integrations import calculate_fee
 from django.db.models import QuerySet
 from django import forms
 from .wallet import GridcoinWallet
-from logging import getLogger
+from logging import getLogger, info
 from result import Err
 
-logger = getLogger("server")
+logger = getLogger("integrations")
 
 TITLE = "Gridcoin Anchor"
-
-class Utility:
-    def calculate_fee(fee_params: Dict) -> Decimal:
-        DEPOSIT_FEE = Decimal(0)
-        WITHDRAWAL_FEE = Decimal(0.001) * Decimal(fee_params["amount"]) # 0.1% withdrawal fee
-
-        if fee_params["operation"] == settings.OPERATION_WITHDRAWAL:
-            return WITHDRAWAL_FEE
-        else:
-            return DEPOSIT_FEE
 
 class GrcDepositIntegration(DepositIntegration):
     __wallet = GridcoinWallet()
@@ -53,6 +45,8 @@ class GrcDepositIntegration(DepositIntegration):
             }
             if transaction.status == Transaction.STATUS.pending_user_transfer_start:
                 # We're waiting on the user to send an off-chain payment
+                loggerClass = logging.getLoggerClass()
+                logger.info("Retrieving deposit address for transaction %s", str(transaction.id))
                 offChainAddress = self.__wallet.get_address(str(transaction.id))
                 if isinstance(offChainAddress, Err):
                     raise offChainAddress.value
@@ -82,7 +76,7 @@ class WithdrawForm(TransactionForm):
 
 class GrcWithdrawalIntegration(WithdrawalIntegration):
     def form_for_transaction(
-        self, transaction: Transaction, post_data=None, amount=None, gridcoin_address=None
+        self, transaction: Transaction, post_data=None, amount=None
     ) -> Optional[forms.Form]:
         if transaction.amount_in:
             return None
@@ -98,8 +92,7 @@ class GrcWithdrawalIntegration(WithdrawalIntegration):
     def content_for_template(
         self,
         template: Template,
-        form: Optional[forms.Form] = None,
-        transaction: Optional[Transaction] = None,
+        form: Optional[forms.Form] = None
     ) -> Optional[Dict]:
         if template == Template.WITHDRAW:
             if not form:
@@ -123,7 +116,7 @@ class GrcRailsIntegration(RailsIntegration):
     __wallet = GridcoinWallet()
 
     def __received(self, grc_transaction: Dict):
-        logger.info(f"GRC Transaction: {grc_transaction}")
+        logger.info("GRC Transaction: %s", grc_transaction)
         return grc_transaction.get("category") == "receive"
 
     def __amount(self, grc_transaction: Dict):
@@ -132,7 +125,7 @@ class GrcRailsIntegration(RailsIntegration):
     def poll_pending_deposits(self, pending_deposits: QuerySet) -> List[Transaction]:
         ready_deposits = []
 
-        for deposit in pending_deposits:
+        for deposit in pending_deposits:            
             grc_transactions = self.__wallet.list_transactions(str(deposit.id))
 
             if isinstance(grc_transactions, Err) or (grc_transactions.value == []):
@@ -141,8 +134,10 @@ class GrcRailsIntegration(RailsIntegration):
             grc_deposits = filter (self.__received, grc_transactions.value)
             total_deposited = sum(map(self.__amount, grc_deposits))
 
+            logger.info("Processing deposit %s. %f %s deposited.", str(deposit.id), total_deposited, deposit.asset.code)
+
             deposit.amount_in = total_deposited
-            deposit.amount_fee = Utility.calculate_fee({
+            deposit.amount_fee = calculate_fee({
                         "amount": deposit.amount_in,
                         "operation": settings.OPERATION_DEPOSIT,
                         "asset_code": deposit.asset.code,
@@ -181,12 +176,22 @@ class GrcRailsIntegration(RailsIntegration):
             transaction.status_message = message
             transaction.save()
 
-        transaction.amount_fee = Utility.calculate_fee({
+        transaction.amount_fee = calculate_fee({
                         "amount": transaction.amount_in,
                         "operation": settings.OPERATION_WITHDRAWAL,
                         "asset_code": transaction.asset.code,
                     })
         send_amount = Decimal(transaction.amount_in) - transaction.amount_fee
+
+        logger.info(
+                "Processing withdrawal %s: %f. Sending %f %s after fee of %f %s",
+                str(transaction.id),
+                transaction.amount_in,
+                send_amount,
+                transaction.asset.code,
+                transaction.amount_fee,
+                transaction.asset.code
+            )
 
         validate_response = self.__wallet.validate_address(transaction.to_address)
 
