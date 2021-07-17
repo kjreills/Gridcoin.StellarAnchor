@@ -92,7 +92,8 @@ class GrcWithdrawalIntegration(WithdrawalIntegration):
     def content_for_template(
         self,
         template: Template,
-        form: Optional[forms.Form] = None
+        form: Optional[forms.Form] = None,
+        transaction: Optional[Transaction] = None
     ) -> Optional[Dict]:
         if template == Template.WITHDRAW:
             if not form:
@@ -125,7 +126,7 @@ class GrcRailsIntegration(RailsIntegration):
     def poll_pending_deposits(self, pending_deposits: QuerySet) -> List[Transaction]:
         ready_deposits = []
 
-        for deposit in pending_deposits:            
+        for deposit in pending_deposits:
             grc_transactions = self.__wallet.list_transactions(str(deposit.id))
 
             if isinstance(grc_transactions, Err) or (grc_transactions.value == []):
@@ -202,9 +203,9 @@ class GrcRailsIntegration(RailsIntegration):
             return
 
         gridcoin_tx_id = self.__wallet.send_payment(transaction.to_address, send_amount, str(transaction.id))
-        
+
         if (isinstance(gridcoin_tx_id, Err)):
-            error("An unexpected exception occurred while executing an outgoing transaction", gridcoin_tx_id.value)        
+            error("An unexpected exception occurred while executing an outgoing transaction", gridcoin_tx_id.value)
         else:
             transaction.external_transaction_id = gridcoin_tx_id.value
             transaction.status = Transaction.STATUS.pending_external
