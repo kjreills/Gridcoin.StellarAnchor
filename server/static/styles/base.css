@@ -1,0 +1,4 @@
+.navbar-brand-multi {
+  display: flex;
+  flex-direction: row;
+}
