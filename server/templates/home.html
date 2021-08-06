@@ -1,0 +1,31 @@
+{% extends "./base.html" %}
+{% load i18n %}
+{% load static %}
+
+{% block "header" %}
+  <nav class="navbar" role="navigation" aria-label="main navigation">
+    <div class="navbar-brand-multi">
+      <img class="logo" src="{% static 'gridcoin-logo.svg' %}" />
+      <img class="logo" src="{% static 'stellar-logo-white.svg' %}" />
+    </div>
+  </nav>
+{% endblock %}
+
+{% block "content" %}
+<section class="section">
+  <h1>Gridcoin Stellar Anchor</h1>
+
+  <h2>Purpose</h2>
+  <p>
+    This project aims to make Gridcoin more visible and easier to purchase by making it 
+    available on the <a href="https://stellar.org">Stellar</a> decentralized exchange.
+    Specifically, this anchor makes it possible to exchange real Gridcoin (GRC) for a tokenized
+    version of it on the Stellar blockchain.
+  </p>
+  <p>
+    The Stellar DEX has very low transaction fees and some cool projects being built on it.
+    Check out <a href="https://lumenswap.io/">Lumenswap</a> for a quick and easy way to swap
+    any two assets on the Stellar DEX!
+  </p>
+</section>
+{% endblock %}
